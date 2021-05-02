@@ -5,6 +5,7 @@ from app import db, login
 
 
 class UserLogin(UserMixin, db.Model):
+    __tablename__ = 'userlogin'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), index=True, unique=True)
     password_hash = db.Column(db.String(128))
@@ -26,16 +27,17 @@ def load_user(id):
 
 
 class QualificationDate(db.Model):
-    # id number = number of priority group
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'qualificationdate'
+    priority_group = db.Column(db.Integer, primary_key=True)
     qualify_date = db.Column(db.Date)
 
     def __repr__(self):
-        return f'<QualificationDate {self.id}: {self.qualify_date}>'
+        return f'<QualificationDate {self.priority_group}: {self.qualify_date}>'
 
 
 class Address(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'address'
+    address_id = db.Column(db.Integer, primary_key=True)
     street = db.Column(db.String(120))
     city = db.Column(db.String(80))
     zipcode = db.Column(db.String(30))
@@ -47,18 +49,26 @@ class Address(db.Model):
         return f'<Address {self.street}, {self.city} {self.state}>'
 
 
+# TimePreferences association table relation
+time_preference = db.Table('timepreference',
+        db.Column('patient_id', db.Integer, db.ForeignKey('patient.patient_id')),
+        db.Column('time_block_id', db.Integer, db.ForeignKey('timeblockoptions.time_block_id'))
+    )
+
+
 class Patient(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'patient'
+    patient_id = db.Column(db.Integer, primary_key=True)
     patient_name = db.Column(db.String(80))
     ssn = db.Column(db.String(11))
     date_of_birth = db.Column(db.Date)
-    address_id = db.Column(db.Integer, db.ForeignKey('address.id'))
+    address_id = db.Column(db.Integer, db.ForeignKey('address.address_id'))
     phone = db.Column(db.String(30))
     email = db.Column(db.String(80))
-    priority_group = db.Column(db.Integer, db.ForeignKey('qualificationdate.id'), default=None)
+    priority_group = db.Column(db.Integer, db.ForeignKey('qualificationdate.priority_group'), default=None)
     login_id = db.Column(db.Integer, db.ForeignKey('userlogin.id'))
     max_distance = db.Column(db.Integer)
-    appointment_matches = db.relatioship('AppointmentMatch', backref='patient', lazy='dynamic')
+    appointment_matches = db.relationship('AppointmentMatch', backref='matched_patient', lazy='dynamic')
     time_preferences = db.relationship(
             'TimeBlockOptions', secondary=time_preference,
             backref=db.backref('patients', lazy='dynamic'), lazy='dynamic')
@@ -68,10 +78,11 @@ class Patient(db.Model):
 
 
 class Provider(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'provider'
+    provider_id = db.Column(db.Integer, primary_key=True)
     provider_name = db.Column(db.String(80))
     phone = db.Column(db.String(30))
-    address_id = db.Column(db.Integer, db.ForeignKey('address.id'))
+    address_id = db.Column(db.Integer, db.ForeignKey('address.address_id'))
     provider_type = db.Column(db.String(80))
     login_id = db.Column(db.Integer, db.ForeignKey('userlogin.id'))
     appointments = db.relationship('Appointment', backref='created_by', lazy='dynamic')
@@ -81,43 +92,36 @@ class Provider(db.Model):
 
 
 class Appointment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), nullable=False)
+    __tablename__ = 'appointment'
+    appointment_id = db.Column(db.Integer, primary_key=True)
+    provider_id = db.Column(db.Integer, db.ForeignKey('provider.provider_id'), nullable=False)
     appointment_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     appointment = db.Column(db.Boolean, default=True)
-    appointment_matches = db.relatioship('AppointmentMatch', backref='appointment', lazy='dynamic')
+    appointment_matches = db.relationship('AppointmentMatch', backref='matched_appointment', lazy='dynamic')
 
     def __repr__(self):
         return f'<Appointment {self.provider_id}: {self.appointment_time}>'
 
 
 class TimeBlockOptions(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'timeblockoptions'
+    time_block_id = db.Column(db.Integer, primary_key=True)
     time_block_start = db.Column(db.Time, nullable=False)
     time_block_end = db.Column(db.Time, nullable=False)
     day_of_week = db.Column(db.Integer, nullable=False) # day_of_week represents Sunday(0) to Saturday(6)
-    patients = db.relationship(
-            'Patient', secondary=time_preference,
-            backref=db.backref('time_blocks', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
-        return f'<TimeBlockOptions {day_of_week}: {time_block_start}-{time_block_end}>'
-
-
-# TimePreferences association table relation
-time_preference = db.Table('timepreference',
-        db.Column('patient_id', db.Integer, db.ForeignKey('patient.id')),
-        db.Column('time_block_id', db.Integer, db.ForeignKey('timeblockoptions.id'))
-    )
+        return f'<TimeBlockOptions {self.day_of_week}: {self.time_block_start}-{self.time_block_end}>'
 
 
 class AppointmentMatch(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=False)
-    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    __tablename__ = 'appointmentmatch'
+    match_id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.appointment_id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.patient_id'), nullable=False)
     offer_status = db.Column(db.String(20))
     time_offer_made = db.Column(db.DateTime)
     time_offer_expires = db.Column(db.DateTime)
 
     def __repr__(self):
-        return f'<AppointmentMatch {patient_id}: {offer_status}>'
+        return f'<AppointmentMatch {self.patient_id}: {self.offer_status}>'
