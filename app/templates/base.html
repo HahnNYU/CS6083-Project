@@ -23,6 +23,13 @@
                     {% if current_user.is_anonymous %}
                     <li><a href="{{ url_for('auth.login') }}">Login</a></li>
                     {% else %}
+                    {% if current_user.user_type=='Patient' %}
+                    <li><a href="{{ url_for('main.time_preference') }}">Time Preference</a></li>
+                    {% endif %}
+                    {% if current_user.user_type=='Provider' %}
+                    {% endif %}
+                    {% if current_user.user_type=='Admin' %}
+                    {% endif %}
                     <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                     {% endif %}
                 </ul>

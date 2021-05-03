@@ -76,6 +76,13 @@ class Patient(db.Model):
     def __repr__(self):
         return f'<Patient {self.patient_name}>'
 
+    def add_time(self, time_block):
+        if not self.has_time_block(time_block):
+            self.time_preferences.append(time_block)
+
+    def has_time_block(self, time_block):
+        return self.time_preferences.filter(
+            time_preference.c.time_block_id==time_block.time_block_id).count() > 0
 
 class Provider(db.Model):
     __tablename__ = 'provider'
@@ -108,10 +115,38 @@ class TimeBlockOptions(db.Model):
     time_block_id = db.Column(db.Integer, primary_key=True)
     time_block_start = db.Column(db.Time, nullable=False)
     time_block_end = db.Column(db.Time, nullable=False)
-    day_of_week = db.Column(db.Integer, nullable=False) # day_of_week represents Sunday(0) to Saturday(6)
+    day_of_week = db.Column(db.Integer, nullable=False) # day_of_week represents Monday(0) to Sunday(6)
 
     def __repr__(self):
-        return f'<TimeBlockOptions {self.day_of_week}: {self.time_block_start}-{self.time_block_end}>'
+        return f'<TimeBlockOptions {self.day_of_week}: {self.time_block_start} to {self.time_block_end}>'
+
+    def __str__(self):
+        dow_mapping = {
+                0: 'Monday',
+                1: 'Tuesday',
+                2: 'Wednesday',
+                3: 'Thursday',
+                4: 'Friday',
+                5: 'Saturday',
+                6: 'Sunday'
+            }
+        dow = dow_mapping.get(self.day_of_week)
+        start = self.time_block_start.hour
+        end = self.time_block_end.hour
+        if start >= 12:
+            p_start = 'PM'
+            if start > 12:
+                start = start - 12
+        else:
+            p_start = 'AM'
+        if end >= 12:
+            p_end = 'PM'
+            if end > 12:
+                end = end - 12
+        else:
+            p_end = 'AM'
+
+        return f'{dow}, {start}:00{p_start} to {end}:00{p_end}'
 
 
 class AppointmentMatch(db.Model):
