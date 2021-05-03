@@ -3,6 +3,7 @@
 
 {% block app_content %}
     <h1>Create New Appointment</h1>
+    <h3>Appointment Time must be entered in US/Eastern Time (ET)</h3>
     <p class="form-text">
     Note: Format is mm-dd-YYYY H:M (ex: 05-15-2021 16:30)
     </p>
@@ -11,4 +12,16 @@
             {{ wtf.quick_form(form) }}
         </div>
     </div>
+    <h1>Current Appointments</h1>
+    <h4>All times in US/Eastern Time (ET)</h4>
+    {% if appointments %}
+    <ul>
+    {% for a in appointments %}
+        <li>{{ a }}</li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    <p>You have created no appointments</p>
+    {% endif %}
+
 {% endblock %}

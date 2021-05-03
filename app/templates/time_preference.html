@@ -3,13 +3,16 @@
 
 {% block app_content %}
     <h1>Time Preferences</h1>
+    <h4>All times are in US/Eastern Time (ET)</h4>
     <h3>Your Current Time Preferences</h3>
     {% if time_preferences %}
+        <ul>
         {% for time in time_preferences %}
-            <ul>
-                <li>{{ time[0] }} <a href="{{ url_for('main.remove_time', time_block_id=time[1]) }}">Remove</a></li>
-            </ul>
+            <li>
+                {{ time }} <a href="{{ url_for('main.remove_time', time_block_id=time.time_block_id) }}">Remove</a>
+            </li>
         {% endfor %}
+        </ul>
     {% else %}
         <p>No time blocks selected.</p>
     {% endif %}

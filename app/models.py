@@ -2,6 +2,8 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login
+import pytz
+from datetime import datetime
 
 
 class UserLogin(UserMixin, db.Model):
@@ -114,6 +116,13 @@ class Appointment(db.Model):
     def __repr__(self):
         return f'<Appointment {self.provider_id}: {self.appointment_time}>'
 
+    def __str__(self):
+        eastern = pytz.timezone('US/Eastern')
+        utc = pytz.utc
+        a_time = utc.localize(self.appointment_time)
+        a_time = a_time.astimezone(eastern)
+        return a_time.strftime('%A, %B %d, %Y %I:%M %p')
+
 
 class TimeBlockOptions(db.Model):
     __tablename__ = 'timeblockoptions'
@@ -125,7 +134,7 @@ class TimeBlockOptions(db.Model):
     def __repr__(self):
         return f'<TimeBlockOptions {self.day_of_week}: {self.time_block_start} to {self.time_block_end}>'
 
-    def __str__(self):
+    def get_dow(self):
         dow_mapping = {
                 0: 'Monday',
                 1: 'Tuesday',
@@ -136,22 +145,26 @@ class TimeBlockOptions(db.Model):
                 6: 'Sunday'
             }
         dow = dow_mapping.get(self.day_of_week)
-        start = self.time_block_start.hour
-        end = self.time_block_end.hour
-        if start >= 12:
-            p_start = 'PM'
-            if start > 12:
-                start = start - 12
-        else:
-            p_start = 'AM'
-        if end >= 12:
-            p_end = 'PM'
-            if end > 12:
-                end = end - 12
-        else:
-            p_end = 'AM'
+        return dow
 
-        return f'{dow}, {start}:00{p_start} to {end}:00{p_end}'
+    def __str__(self):
+        eastern = pytz.timezone('US/Eastern')
+        utc = pytz.utc
+        # initialize start with utcnow and update hour and minute
+        utc_start = datetime.utcnow()
+        utc_start = utc_start.replace(hour=self.time_block_start.hour)
+        utc_start = utc_start.replace(minute=self.time_block_start.minute)
+        utc_start = utc.localize(utc_start)
+        # initialize end with utcnow and update hour and minute
+        utc_end = datetime.utcnow()
+        utc_end = utc_end.replace(hour=self.time_block_end.hour)
+        utc_end = utc_end.replace(minute=self.time_block_end.minute)
+        utc_end = utc.localize(utc_end)
+        # convert start and end to eastern timezone
+        start = utc_start.astimezone(eastern)
+        end = utc_end.astimezone(eastern)
+
+        return f'{self.get_dow()}, {start.strftime("%I:%M %p")} to {end.strftime("%I:%M %p")}'
 
 
 class AppointmentMatch(db.Model):

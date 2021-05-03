@@ -5,6 +5,8 @@ from app.main import bp
 from app.models import TimeBlockOptions, Patient, Appointment, Provider
 from app.main.forms import TimePreferenceForm, CreateAppointmentForm
 
+import pytz
+
 
 @bp.route('/', methods=['GET'])
 def index():
@@ -29,7 +31,7 @@ def time_preference():
                 time_block = TimeBlockOptions.query.filter_by(time_block_id=int(time_id)).first()
                 patient.add_time(time_block)
             db.session.commit()
-        time_preferences = [(str(t), t.time_block_id) for t in patient.time_preferences]
+        time_preferences = [t for t in patient.time_preferences]
         return render_template('time_preference.html', title='Patient Time Preference', form=form, time_preferences=time_preferences)
 
 
@@ -61,9 +63,15 @@ def create_appointment():
         # Get provider
         provider = Provider.query.filter_by(login_id=current_user.id).first()
         if form.validate_on_submit():
+            # Convert datetime to UTC
+            eastern = pytz.timezone('US/Eastern')
+            utc = pytz.utc
+            appointment_time = eastern.localize(form.appointment_time.data) 
+            utc_appointment_time = appointment_time.astimezone(utc)
             # Create new appointment
-            appointment = Appointment(provider_id=provider.provider_id, appointment_time=form.appointment_time.data) 
+            appointment = Appointment(provider_id=provider.provider_id, appointment_time=utc_appointment_time) 
             db.session.add(appointment)
             db.session.commit()
             return redirect(url_for('main.create_appointment'))
-        return render_template('create_appointment.html', title='Create Appointment', form=form)
+        appointments = provider.appointments
+        return render_template('create_appointment.html', title='Create Appointment', form=form, appointments=appointments)

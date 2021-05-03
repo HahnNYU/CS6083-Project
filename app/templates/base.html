@@ -27,7 +27,7 @@
                     <li><a href="{{ url_for('main.time_preference') }}">Time Preference</a></li>
                     {% endif %}
                     {% if current_user.user_type=='Provider' %}
-                    <li><a href="{{ url_for('main.create_appointment') }}">Create Appointment</a></li>
+                    <li><a href="{{ url_for('main.create_appointment') }}">Appointments</a></li>
                     {% endif %}
                     {% if current_user.user_type=='Admin' %}
                     {% endif %}
