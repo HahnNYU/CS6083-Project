@@ -88,6 +88,7 @@ class Patient(db.Model):
         return self.time_preferences.filter(
             time_preference.c.time_block_id==time_block.time_block_id).count() > 0
 
+
 class Provider(db.Model):
     __tablename__ = 'provider'
     provider_id = db.Column(db.Integer, primary_key=True)
@@ -107,7 +108,7 @@ class Appointment(db.Model):
     appointment_id = db.Column(db.Integer, primary_key=True)
     provider_id = db.Column(db.Integer, db.ForeignKey('provider.provider_id'), nullable=False)
     appointment_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    appointment = db.Column(db.Boolean, default=True)
+    available = db.Column(db.Boolean, default=True)
     appointment_matches = db.relationship('AppointmentMatch', backref='matched_appointment', lazy='dynamic')
 
     def __repr__(self):

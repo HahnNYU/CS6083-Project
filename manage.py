@@ -17,4 +17,5 @@ def make_shell_context():
             'Provider': Provider, 
             'Appointment': Appointment, 
             'TimeBlockOptions': TimeBlockOptions,
-            'AppointmentMatch': AppointmentMatch}
+            'AppointmentMatch': AppointmentMatch
+           }

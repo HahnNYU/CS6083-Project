@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 1dd80d3a1bed
+Revision ID: f7788c9aeabd
 Revises: 
-Create Date: 2021-05-02 14:58:17.180097
+Create Date: 2021-05-03 12:22:04.333865
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '1dd80d3a1bed'
+revision = 'f7788c9aeabd'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -79,7 +79,7 @@ def upgrade():
     sa.Column('appointment_id', sa.Integer(), nullable=False),
     sa.Column('provider_id', sa.Integer(), nullable=False),
     sa.Column('appointment_time', sa.DateTime(), nullable=True),
-    sa.Column('appointment', sa.Boolean(), nullable=True),
+    sa.Column('available', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['provider_id'], ['provider.provider_id'], ),
     sa.PrimaryKeyConstraint('appointment_id')
     )
