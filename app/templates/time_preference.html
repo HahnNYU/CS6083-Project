@@ -7,7 +7,7 @@
     {% if time_preferences %}
         {% for time in time_preferences %}
             <ul>
-                <li>{{ time }}</li>
+                <li>{{ time[0] }} <a href="{{ url_for('main.remove_time', time_block_id=time[1]) }}">Remove</a></li>
             </ul>
         {% endfor %}
     {% else %}

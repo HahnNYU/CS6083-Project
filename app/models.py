@@ -80,6 +80,10 @@ class Patient(db.Model):
         if not self.has_time_block(time_block):
             self.time_preferences.append(time_block)
 
+    def remove_time(self, time_block):
+        if self.has_time_block(time_block):
+            self.time_preferences.remove(time_block)
+
     def has_time_block(self, time_block):
         return self.time_preferences.filter(
             time_preference.c.time_block_id==time_block.time_block_id).count() > 0
