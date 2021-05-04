@@ -8,6 +8,7 @@
             <h3>{{ apt.appointment }}</h3>  
             <h4>{{ apt.address }}</h4>  
             <h5>Distance: {{ apt.distance }} miles</h5>
+            <a class="btn btn-primary" href="{{ url_for('main.select_appointment', appointment_id=apt.appointment.appointment_id) }}" type="button">Register</a>
         </div>
         {% endfor %}
 {% endblock %}

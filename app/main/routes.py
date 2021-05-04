@@ -3,11 +3,12 @@ from flask_login import current_user, login_required
 from app import db
 from app.main import bp
 from app.models import (TimeBlockOptions, Patient, Appointment, 
-                        Provider, Address)
+                        Provider, Address, AppointmentMatch)
 from app.main.forms import TimePreferenceForm, CreateAppointmentForm
 
 import pytz
 from geopy.distance import geodesic
+from datetime import datetime
 
 
 @bp.route('/', methods=['GET'])
@@ -23,9 +24,9 @@ def time_preference():
         return redirect(url_for('main.index')) 
     else:
         form = TimePreferenceForm()
-        # get all choices in TimeBlockOptions relation
+        # Get all choices in TimeBlockOptions relation
         form.time_options.choices = [(str(option.time_block_id), str(option)) for option in TimeBlockOptions.query.all()]
-        # get patient linked to user login creds
+        # Get patient linked to user login creds
         patient = Patient.query.filter_by(login_id=current_user.id).first()
         if form.validate_on_submit():
             # Associate each selected time block with the patient
@@ -86,12 +87,12 @@ def available_appointments():
         flash('Only patients can view that page')
         return redirect(url_for('main.index')) 
     else:
-        # get patient linked to user login creds
+        # Get patient linked to user login creds
         patient = Patient.query.filter_by(login_id=current_user.id).first()
         time_blocks = patient.time_preferences
-        # get all available appointments
+        # Get all available appointments
         available_appointments = Appointment.query.filter_by(available=True).all()
-        # filter appointments based on patient's time preferences
+        # Filter appointments based on patient's time preferences
         appointment_options = []
         for a in available_appointments:
             for t in time_blocks:
@@ -101,24 +102,52 @@ def available_appointments():
                         and a.appointment_time.time() < t.time_block_end):
                     appointment_options.append(a)
                     break
-        # filter appointments based on distance
+        # Filter appointments based on distance
         appointments_by_distance = []
-        # get patient lat and long
+        # Get patient lat and long
         patient_address = Address.query.filter_by(address_id=patient.address_id).first()
         patient_coord = (patient_address.latitude, patient_address.longitude)
         for a in appointment_options:
-            # get appointment lat and long
+            # Get appointment lat and long
             provider = Provider.query.filter_by(provider_id=a.provider_id).first()
             appointment_address = Address.query.filter_by(address_id=provider.address_id).first()
             appointment_coord = (appointment_address.latitude, appointment_address.longitude)
-            # calculate distance between the two points
+            # Calculate distance between the two points
             distance = geodesic(patient_coord, appointment_coord).miles
             if distance > patient.max_distance:
                 continue
             appointment_payload = {'appointment': a, 'provider': provider, 'distance': round(distance, 2), 'address': appointment_address}
             appointments_by_distance.append(appointment_payload)
-        # sort appointments by distance
+        # Sort appointments by distance
         appointments_by_distance.sort(key=lambda x: x.get('distance'))
         return render_template('available_appointments.html', appointments=appointments_by_distance)
 
 
+@bp.route('/select_appointment/<appointment_id>')
+@login_required
+def select_appointment(appointment_id):
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        # Get patient
+        patient = Patient.query.filter_by(login_id=current_user.id).first()
+        # Check if patient already has an accepted appointment
+        if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
+            flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
+            # TODO: change this redirect to cancel page
+            return redirect(url_for('main.available_appointments')) 
+        # Get appointment
+        appointment = Appointment.query.filter_by(appointment_id=appointment_id).first()
+        # Create AppointmentMatch with status 'accepted'
+        new_match = AppointmentMatch(appointment_id=appointment_id, patient_id=patient.patient_id, offer_status='accepted', time_offer_made=datetime.utcnow())
+        # Check if appointment is still available
+        if appointment.available:
+            appointment.available = False
+            db.session.add(appointment)
+            db.session.add(new_match)
+            db.session.commit()
+            flash(f'You successfully registered for the appointment on {appointment}')
+        else:
+            flash('Sorry, the appointment you tried to register for is no longer available')
+        return redirect(url_for('main.available_appointments')) 
