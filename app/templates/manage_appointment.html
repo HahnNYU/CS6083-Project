@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+    {% if accepted_match %}
+        <h1>Current Appointment:</h1>
+        <div class="appointments form-group">
+            <h2>Provider: {{ accepted_match.provider.provider_name }}</h2>  
+            <h3>{{ accepted_match.appointment }}</h3>  
+            <h4>{{ accepted_match.address }}</h4>  
+            <h5>Distance: {{ accepted_match.distance }} miles</h5>
+            <a class="btn btn-danger" href="{{ url_for('main.cancel_appointment', match_id=accepted_match.match.match_id) }}" type="button">Cancel</a>
+        </div>
+    {% endif %}
+{% endblock %}

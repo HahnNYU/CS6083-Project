@@ -5,9 +5,9 @@ from app.main import bp
 from app.models import (TimeBlockOptions, Patient, Appointment, 
                         Provider, Address, AppointmentMatch)
 from app.main.forms import TimePreferenceForm, CreateAppointmentForm
+from app.main.utils import construct_appointment_payload
 
 import pytz
-from geopy.distance import geodesic
 from datetime import datetime
 
 
@@ -104,19 +104,10 @@ def available_appointments():
                     break
         # Filter appointments based on distance
         appointments_by_distance = []
-        # Get patient lat and long
-        patient_address = Address.query.filter_by(address_id=patient.address_id).first()
-        patient_coord = (patient_address.latitude, patient_address.longitude)
         for a in appointment_options:
-            # Get appointment lat and long
-            provider = Provider.query.filter_by(provider_id=a.provider_id).first()
-            appointment_address = Address.query.filter_by(address_id=provider.address_id).first()
-            appointment_coord = (appointment_address.latitude, appointment_address.longitude)
-            # Calculate distance between the two points
-            distance = geodesic(patient_coord, appointment_coord).miles
-            if distance > patient.max_distance:
+            appointment_payload = construct_appointment_payload(patient, a)
+            if appointment_payload.get('distance', 1000) > patient.max_distance:
                 continue
-            appointment_payload = {'appointment': a, 'provider': provider, 'distance': round(distance, 2), 'address': appointment_address}
             appointments_by_distance.append(appointment_payload)
         # Sort appointments by distance
         appointments_by_distance.sort(key=lambda x: x.get('distance'))
@@ -135,7 +126,6 @@ def select_appointment(appointment_id):
         # Check if patient already has an accepted appointment
         if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
-            # TODO: change this redirect to cancel page
             return redirect(url_for('main.available_appointments')) 
         # Get appointment
         appointment = Appointment.query.filter_by(appointment_id=appointment_id).first()
@@ -147,7 +137,48 @@ def select_appointment(appointment_id):
             db.session.add(appointment)
             db.session.add(new_match)
             db.session.commit()
-            flash(f'You successfully registered for the appointment on {appointment}')
+            flash(f'You successfully registered for the appointment on {appointment} at {appointment.created_by.provider_name}')
         else:
             flash('Sorry, the appointment you tried to register for is no longer available')
         return redirect(url_for('main.available_appointments')) 
+
+
+@bp.route('/manage_appointment')
+@login_required
+def manage_appointment():
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        # Get patient
+        patient = Patient.query.filter_by(login_id=current_user.id).first()
+        # Get appointment matches if any
+        accepted_match = AppointmentMatch.query.filter_by(patient_id=patient.patient_id).filter_by(offer_status='accepted').first()
+        accepted_match_payload = {}
+        if accepted_match:
+            appointment = accepted_match.matched_appointment
+            accepted_match_payload = construct_appointment_payload(patient, appointment)
+            accepted_match_payload['match'] = accepted_match
+
+        return render_template('manage_appointment.html', accepted_match=accepted_match_payload)
+
+
+@bp.route('/cancel_appointment/<match_id>')
+@login_required
+def cancel_appointment(match_id):
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        current_match = AppointmentMatch.query.filter_by(match_id=match_id).first()
+        current_appointment = current_match.matched_appointment
+        # Cancel current match and add change to db session
+        current_match.offer_status = 'cancelled'
+        db.session.add(current_match)
+        # Make cancelled appointment available and add change to db session
+        current_appointment.available = True
+        db.session.add(current_appointment)
+        # Commit the db session
+        db.session.commit()
+        flash('You have successfully cancelled your appointment.')
+        return redirect(url_for('main.manage_appointment'))
