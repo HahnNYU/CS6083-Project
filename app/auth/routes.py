@@ -6,6 +6,7 @@ from app.auth import bp
 from app.auth.forms import (LoginForm, PatientRegistrationForm, 
                         ProviderRegistrationForm)
 from app.models import UserLogin, Address, Patient, Provider
+from app.auth.utils import geolocate
 
 
 
@@ -43,11 +44,17 @@ def patient_register():
         user = UserLogin(username=form.username.data, user_type='Patient')
         user.set_password(form.password.data)
         # Create Address
-        address = Address(street=form.street.data, 
-                          city=form.city.data,
-                          zipcode=form.zipcode.data, 
-                          state=form.state.data)
-        # TODO add latitude and longitude to the address entry
+        street = form.street.data 
+        city = form.city.data
+        state = form.state.data
+        zipcode = form.zipcode.data 
+        latitude, longitude = geolocate(street, city, state, zipcode)
+        address = Address(street=street, 
+                          city=city,
+                          zipcode=zipcode, 
+                          state=state,
+                          latitude=latitude,
+                          longitude=longitude)
         # Create Patient
         patient = Patient(patient_name=form.name.data, 
                           ssn=form.ssn.data,
@@ -79,11 +86,17 @@ def provider_register():
         user = UserLogin(username=form.username.data, user_type='Provider')
         user.set_password(form.password.data)
         # Create Address
-        address = Address(street=form.street.data, 
-                          city=form.city.data,
-                          zipcode=form.zipcode.data, 
-                          state=form.state.data)
-        # TODO add latitude and longitude to the address entry
+        street = form.street.data 
+        city = form.city.data
+        state = form.state.data
+        zipcode = form.zipcode.data 
+        latitude, longitude = geolocate(street, city, state, zipcode)
+        address = Address(street=street, 
+                          city=city,
+                          zipcode=zipcode, 
+                          state=state,
+                          latitude=latitude,
+                          longitude=longitude)
         # Create Provider
         provider = Provider(provider_name=form.name.data,
                             phone=form.phone.data,

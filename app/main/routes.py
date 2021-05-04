@@ -75,3 +75,41 @@ def create_appointment():
             return redirect(url_for('main.create_appointment'))
         appointments = provider.appointments
         return render_template('create_appointment.html', title='Create Appointment', form=form, appointments=appointments)
+
+
+@bp.route('/available_appointments')
+@login_required
+def available_appointments():
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
