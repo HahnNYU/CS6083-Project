@@ -50,6 +50,9 @@ class Address(db.Model):
     def __repr__(self):
         return f'<Address {self.street}, {self.city} {self.state}>'
 
+    def __str__(self):
+        return f'{self.street}, {self.city} {self.state}, {self.zipcode}'
+
 
 # TimePreferences association table relation
 time_preference = db.Table('timepreference',

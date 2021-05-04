@@ -29,7 +29,7 @@ class PatientRegistrationForm(FlaskForm):
     date_of_birth = DateField('Date of Birth', format='%m-%d-%Y', validators=[DataRequired()])
     phone = StringField('Phone Number')
     email = StringField('Email', validators=[DataRequired(), Email()])
-    max_distance = IntegerField('Max Travel Distance')
+    max_distance = IntegerField('Max Travel Distance', validators=[DataRequired()])
 
     submit = SubmitField('Register')
 
