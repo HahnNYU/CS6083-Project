@@ -127,6 +127,9 @@ def select_appointment(appointment_id):
         if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
             return redirect(url_for('main.available_appointments')) 
+        elif AppointmentMatch.query.filter_by(offer_status='pending').filter_by(patient_id=patient.patient_id).first():
+            flash('You cannot register for an appointment while you have a pending suggested appointment. Please decline your suggested appointment before registering for a new one') 
+            return redirect(url_for('main.manage_appointment')) 
         # Get appointment
         appointment = Appointment.query.filter_by(appointment_id=appointment_id).first()
         # Create AppointmentMatch with status 'accepted'
@@ -153,14 +156,22 @@ def manage_appointment():
         # Get patient
         patient = Patient.query.filter_by(login_id=current_user.id).first()
         # Get appointment matches if any
-        accepted_match = AppointmentMatch.query.filter_by(patient_id=patient.patient_id).filter_by(offer_status='accepted').first()
+        accepted_match = patient.appointment_matches.filter_by(offer_status='accepted').first()
         accepted_match_payload = {}
+        suggested_match_payload = {}
         if accepted_match:
             appointment = accepted_match.matched_appointment
             accepted_match_payload = construct_appointment_payload(patient, appointment)
             accepted_match_payload['match'] = accepted_match
+        else:
+        # Get suggested appointment if one exists
+            suggested_match = patient.appointment_matches.filter_by(offer_status='pending').first()
+            if suggested_match:
+                appointment = suggested_match.matched_appointment
+                suggested_match_payload = construct_appointment_payload(patient, appointment)
+                suggested_match_payload['match'] = suggested_match
 
-        return render_template('manage_appointment.html', accepted_match=accepted_match_payload)
+        return render_template('manage_appointment.html', accepted_match=accepted_match_payload, suggested_match=suggested_match_payload)
 
 
 @bp.route('/cancel_appointment/<match_id>')
@@ -181,4 +192,37 @@ def cancel_appointment(match_id):
         # Commit the db session
         db.session.commit()
         flash('You have successfully cancelled your appointment.')
+        return redirect(url_for('main.manage_appointment'))
+
+
+@bp.route('/accept_appointment/<match_id>')
+@login_required
+def accept_appointment(match_id):
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        match = AppointmentMatch.query.filter_by(match_id=match_id).first()
+        match.offer_status = 'accepted'
+        db.session.add(match)
+        db.session.commit()
+        flash('You have successfully accepted the appointment')
+        return redirect(url_for('main.manage_appointment'))
+
+
+@bp.route('/decline_appointment/<match_id>')
+@login_required
+def decline_appointment(match_id):
+    if current_user.user_type != 'Patient':
+        flash('Only patients can view that page')
+        return redirect(url_for('main.index')) 
+    else:
+        match = AppointmentMatch.query.filter_by(match_id=match_id).first()
+        appointment = match.matched_appointment
+        match.offer_status = 'declined'
+        db.session.add(match)
+        appointment.available = True
+        db.session.add(appointment)
+        db.session.commit()
+        flash('You have successfully declined the appointment')
         return redirect(url_for('main.manage_appointment'))

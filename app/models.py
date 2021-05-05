@@ -181,3 +181,11 @@ class AppointmentMatch(db.Model):
 
     def __repr__(self):
         return f'<AppointmentMatch {self.patient_id}: {self.offer_status}>'
+
+    def expire_time(self):
+        eastern = pytz.timezone('US/Eastern')
+        utc = pytz.utc
+        utc_expires = utc.localize(self.time_offer_expires)
+        et_expires = utc_expires.astimezone(eastern)
+        return f'{et_expires.strftime("%A, %B %d, %Y %I:%M %p")}'
+

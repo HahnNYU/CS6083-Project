@@ -11,4 +11,21 @@
             <a class="btn btn-danger" href="{{ url_for('main.cancel_appointment', match_id=accepted_match.match.match_id) }}" type="button">Cancel</a>
         </div>
     {% endif %}
+    {% if suggested_match %}
+        <h1>Suggested Appointment:</h1>
+        <div class="appointments form-group">
+            <h2>Provider: {{ suggested_match.provider.provider_name }}</h2>  
+            <h3>{{ suggested_match.appointment }}</h3>  
+            <h4>{{ suggested_match.address }}</h4>  
+            <h5>Distance: {{ suggested_match.distance }} miles</h5>
+            <p>Offer Expires: {{ suggested_match.match.expire_time() }}</p>
+            <div>
+                <a class="btn btn-success" href="{{ url_for('main.accept_appointment', match_id=suggested_match.match.match_id) }}" type="button">Accept</a>
+                <a class="btn btn-danger" href="{{ url_for('main.decline_appointment', match_id=suggested_match.match.match_id) }}" type="button">Decline</a>
+            </div>
+        </div>
+    {% endif %}
+    {% if not accepted_match and not suggested_match %}
+        <h1>No appointments to manage!</h1>
+    {% endif %}
 {% endblock %}

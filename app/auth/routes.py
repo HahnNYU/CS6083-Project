@@ -1,12 +1,14 @@
 from flask import render_template, redirect, url_for, flash, request
-from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
 from app import db
 from app.auth import bp
 from app.auth.forms import (LoginForm, PatientRegistrationForm, 
                         ProviderRegistrationForm)
-from app.models import UserLogin, Address, Patient, Provider
-from app.auth.utils import geolocate
+from app.models import UserLogin, Address, Patient, Provider, AppointmentMatch
+from app.auth.utils import geolocate, appointment_matcher
+
+from sqlalchemy import or_
+from datetime import datetime, timedelta
 
 
 
@@ -20,11 +22,36 @@ def login():
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password')
             return redirect(url_for('auth.login'))
+
         login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('main.index')
-        return redirect(next_page)
+        if user.user_type == 'Patient':
+            patient = Patient.query.filter_by(login_id=user.id).first()
+            # Search for suggested appointment if the patient has none
+            if not patient.appointment_matches.filter(
+                            or_(AppointmentMatch.offer_status=='accepted', 
+                                    AppointmentMatch.offer_status=='pending')).first():
+                appointment_option = appointment_matcher(patient)
+                if appointment_option:
+                    # Create new appointment match
+                    new_match = AppointmentMatch(
+                            appointment_id=appointment_option.appointment_id,
+                            patient_id=patient.patient_id,
+                            offer_status='pending',
+                            time_offer_made=datetime.utcnow(),
+                            time_offer_expires=datetime.utcnow()+timedelta(days=1)
+                            )
+                    if appointment_option.available:
+                        appointment_option.available = False
+                        db.session.add(appointment_option)
+                        db.session.add(new_match)
+                        db.session.commit()
+                        flash(f'You have a new appointment offer. Offer expires in one day')
+
+            return redirect(url_for('main.manage_appointment'))
+        elif user.user_type == 'Provider':
+            return redirect(url_for('main.create_appointment'))
+        else:
+            return redirect(url_for('main.index'))
     return render_template('auth/login.html', title='Sign in', form=form)
 
 
