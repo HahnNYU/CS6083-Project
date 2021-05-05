@@ -24,6 +24,7 @@ def geolocate(street, city, state, zipcode):
         return None, None
 
 
+# Appointment view for patients
 def construct_appointment_payload(patient, appointment):
     # Get patient lat and long
     patient_address = Address.query.filter_by(address_id=patient.address_id).first()

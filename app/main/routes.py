@@ -8,14 +8,37 @@ from app.main.forms import (TimePreferenceForm,
                             CreateAppointmentForm,
                             EditPatientProfileForm)
 from app.main.utils import construct_appointment_payload, geolocate
+from sqlalchemy import or_
 
 import pytz
 from datetime import datetime
 
 
-@bp.route('/', methods=['GET'])
+@bp.route('/')
+@bp.route('/home')
 def index():
-    return render_template('index.html', title='Home Page')
+    appointment_data = {'accepted': 0, 
+                        'pending': 0,
+                        'declined': 0,
+                        'cancelled': 0,
+                        'no show': 0,
+                        'vaccinated': 0
+                       }
+    provider = None
+    patient = None
+    if current_user.is_anonymous:
+        pass
+    elif current_user.user_type == 'Patient':
+        patient = Patient.query.filter_by(login_id=current_user.id).first()
+    elif current_user.user_type == 'Provider':
+        provider = Provider.query.filter_by(login_id=current_user.id).first()
+        appointments = provider.appointments
+        for apt in appointments:
+            matches = apt.appointment_matches
+            for match in matches:
+                appointment_data[match.offer_status] += 1
+
+    return render_template('index.html', title='Home Page', appointment_data=appointment_data, provider=provider, patient=patient)
 
 
 @bp.route('/time_preference', methods=['GET','POST'])
@@ -78,8 +101,27 @@ def create_appointment():
             db.session.add(appointment)
             db.session.commit()
             return redirect(url_for('main.create_appointment'))
-        appointments = provider.appointments
-        return render_template('create_appointment.html', title='Create Appointment', form=form, appointments=appointments)
+        return render_template('create_appointment.html', title='Create Appointment', form=form)
+
+
+@bp.route('/view_appointments', methods=['GET','POST'])
+@login_required
+def view_appointments():
+    if current_user.user_type != 'Provider':
+        flash('Only providers can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        provider = Provider.query.filter_by(login_id=current_user.id).first()
+        appointments = [{'appointment': a} for a in provider.appointments]
+        for apt_dict in appointments:
+            apt = apt_dict['appointment']
+            # Check if appointment has an active match
+            match = apt.appointment_matches.filter(
+                            or_(AppointmentMatch.offer_status=='accepted', 
+                                    AppointmentMatch.offer_status=='pending')).first()
+            if match:
+                apt_dict['match'] = match
+        return render_template('view_appointments.html', title='View Appointments', appointments=appointments)
 
 
 @bp.route('/available_appointments')

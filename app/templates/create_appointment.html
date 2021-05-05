@@ -12,15 +12,4 @@
             {{ wtf.quick_form(form) }}
         </div>
     </div>
-    <h1>Current Appointments</h1>
-    <h4>All times in US/Eastern Time (ET)</h4>
-    {% if appointments %}
-    <ul>
-    {% for a in appointments %}
-        <li>{{ a }}</li>
-    {% endfor %}
-    </ul>
-    {% else %}
-    <p>You have created no appointments</p>
-    {% endif %}
 {% endblock %}

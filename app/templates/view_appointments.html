@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+    <h1>Appointments:</h1>
+    <h4>All times in US/Eastern Time (ET)</h4>
+    {% if appointments %}
+        {% for apt in appointments %}
+        <div class="appointments form-group">
+            <h2>{{ apt.appointment }}</h2>  
+            {% if apt.match %}
+                <h3>Patient Info:</h3>
+                <h4>Name: {{ apt.match.matched_patient.patient_name }}</h4>  
+                <h4>Email: {{ apt.match.matched_patient.email }}</h4>
+                <h4>Phone: {{ apt.match.matched_patient.phone }}</h4>
+                <h3>Offer Status: {{ apt.match.offer_status }}</h3>
+            {% else %}
+                <h3>Appointment not currently matched</h3>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

@@ -49,7 +49,7 @@ def login():
 
             return redirect(url_for('main.manage_appointment'))
         elif user.user_type == 'Provider':
-            return redirect(url_for('main.create_appointment'))
+            return redirect(url_for('main.index'))
         else:
             return redirect(url_for('main.index'))
     return render_template('auth/login.html', title='Sign in', form=form)

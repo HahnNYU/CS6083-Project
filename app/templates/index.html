@@ -1,5 +1,27 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-    <h1>Home Page</h1>
+    
+    {% if current_user.is_anonymous %}
+        <h1>Welcome to COVID-19 vaccine appointment app!</h1>
+    {% elif current_user.user_type == 'Provider' %}
+        <div class="jumbotron">
+            <h1 class="dislpay-4">{{ provider.provider_name }} Summary:</h1>
+            <hr class="my-4">
+            <p>Number of Accepted Appointments: <span class="label label-pill label-success">{{ appointment_data.accepted }}</span></p>
+            <hr class="my-4">
+            <p>Number of Pending Appointments: <span class="label label-pill label-info">{{ appointment_data.pending }}</span></p>
+            <hr class="my-4">
+            <p>Number of Declined Appointments: <span class="label label-pill label-danger">{{ appointment_data.declined }}</span></p>
+            <hr class="my-4">
+            <p>Number of Cancellations: <span class="label label-pill label-default">{{ appointment_data.cancelled }}</span></p>
+            <hr class="my-4">
+            <p>Number of No Shows: <span class="label label-pill label-warning">{{ appointment_data['no show'] }}</span></p>
+            <hr class="my-4">
+            <p>Number of Vaccinations Given: <span class="label label-pill label-primary">{{ appointment_data.vaccinated }}</span></p>
+        </div>
+    {% elif current_user.user_type == 'Patient' %}
+        <h1>Hello, {{ patient.patient_name }}.</h1>
+        <h1>Welcome to COVID-19 vaccine appointment app!</h1>
+    {% endif %}
 {% endblock %}
