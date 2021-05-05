@@ -4,8 +4,10 @@ from app import db
 from app.main import bp
 from app.models import (TimeBlockOptions, Patient, Appointment, 
                         Provider, Address, AppointmentMatch)
-from app.main.forms import TimePreferenceForm, CreateAppointmentForm
-from app.main.utils import construct_appointment_payload
+from app.main.forms import (TimePreferenceForm, 
+                            CreateAppointmentForm,
+                            EditPatientProfileForm)
+from app.main.utils import construct_appointment_payload, geolocate
 
 import pytz
 from datetime import datetime
@@ -111,7 +113,7 @@ def available_appointments():
             appointments_by_distance.append(appointment_payload)
         # Sort appointments by distance
         appointments_by_distance.sort(key=lambda x: x.get('distance'))
-        return render_template('available_appointments.html', appointments=appointments_by_distance)
+        return render_template('available_appointments.html', title='Available Appointments', appointments=appointments_by_distance)
 
 
 @bp.route('/select_appointment/<appointment_id>')
@@ -171,7 +173,7 @@ def manage_appointment():
                 suggested_match_payload = construct_appointment_payload(patient, appointment)
                 suggested_match_payload['match'] = suggested_match
 
-        return render_template('manage_appointment.html', accepted_match=accepted_match_payload, suggested_match=suggested_match_payload)
+        return render_template('manage_appointment.html', title='Manage Appointment', accepted_match=accepted_match_payload, suggested_match=suggested_match_payload)
 
 
 @bp.route('/cancel_appointment/<match_id>')
@@ -226,3 +228,53 @@ def decline_appointment(match_id):
         db.session.commit()
         flash('You have successfully declined the appointment')
         return redirect(url_for('main.manage_appointment'))
+
+
+@bp.route('/edit_patient_profile', methods=['GET','POST'])
+@login_required
+def edit_patient_profile():
+    if current_user.user_type != 'Patient':
+        flash('Only pateints can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        patient = Patient.query.filter_by(login_id=current_user.id).first()
+        address = Address.query.filter_by(address_id=patient.address_id).first()
+        form = EditPatientProfileForm(current_user.username, patient.email)
+        if form.validate_on_submit():
+            # Update login data
+            current_user.username = form.username.data
+            # Update address data
+            address.street = form.street.data
+            address.city = form.city.data
+            address.zipcode = form.zipcode.data
+            address.state = form.state.data
+            latitude, longitude = geolocate(address.street, address.city, address.state, address.zipcode)
+            address.latitude = latitude
+            address.longitude = longitude
+            # Update patient data
+            patient.patient_name = form.name.data
+            patient.ssn = form.ssn.data
+            patient.date_of_birth = form.date_of_birth.data
+            patient.phone = form.phone.data
+            patient.email = form.email.data
+            patient.max_distance = form.max_distance.data
+            db.session.add_all([current_user, patient, address])
+            db.session.commit()
+            flash('Your profile changes have been saved')
+            return redirect(url_for('main.edit_patient_profile'))
+        elif request.method=='GET':
+            # Initialize login data
+            form.username.data = current_user.username
+            # Initialize address data
+            form.street.data = address.street
+            form.city.data = address.city
+            form.zipcode.data = address.zipcode
+            form.state.data = address.state
+            # Initialize patient data
+            form.name.data = patient.patient_name
+            form.ssn.data = patient.ssn
+            form.date_of_birth.data = patient.date_of_birth
+            form.phone.data = patient.phone
+            form.email.data = patient.email
+            form.max_distance.data = patient.max_distance
+        return render_template('edit_patient_profile.html', title='Edit Profile', form=form)

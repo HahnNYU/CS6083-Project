@@ -1,28 +1,9 @@
 from app.models import Appointment
-from app.main.utils import construct_appointment_payload
-
-from geopy.geocoders import Nominatim
+from app.main.utils import construct_appointment_payload, geolocate
 
 
-def geolocate(street, city, state, zipcode):
-    geolocator = Nominatim(user_agent='hgh2023-cs6083')
-    input_address = f'{street} {city} {state} {zipcode}'
-    try:
-        location_data = geolocator.geocode(input_address)
-        latitude = location_data.latitude
-        longitude = location_data.longitude
-        return latitude, longitude
-    except Exception:
-        pass
-    # If API can't find the street, try again without street
-    try:
-        input_address = f'{city} {state} {zipcode}'
-        location_data = geolocator.geocode(input_address)
-        latitude = location_data.latitude
-        longitude = location_data.longitude
-        return latitude, longitude
-    except Exception:
-        return None, None
+def register_geolocate(street, city, state, zipcode):
+    return geolocate(street, city, state, zipcode)
 
 
 def appointment_matcher(patient):

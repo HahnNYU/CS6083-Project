@@ -5,7 +5,7 @@ from app.auth import bp
 from app.auth.forms import (LoginForm, PatientRegistrationForm, 
                         ProviderRegistrationForm)
 from app.models import UserLogin, Address, Patient, Provider, AppointmentMatch
-from app.auth.utils import geolocate, appointment_matcher
+from app.auth.utils import register_geolocate, appointment_matcher
 
 from sqlalchemy import or_
 from datetime import datetime, timedelta
@@ -75,7 +75,7 @@ def patient_register():
         city = form.city.data
         state = form.state.data
         zipcode = form.zipcode.data 
-        latitude, longitude = geolocate(street, city, state, zipcode)
+        latitude, longitude = register_geolocate(street, city, state, zipcode)
         address = Address(street=street, 
                           city=city,
                           zipcode=zipcode, 
@@ -117,7 +117,7 @@ def provider_register():
         city = form.city.data
         state = form.state.data
         zipcode = form.zipcode.data 
-        latitude, longitude = geolocate(street, city, state, zipcode)
+        latitude, longitude = register_geolocate(street, city, state, zipcode)
         address = Address(street=street, 
                           city=city,
                           zipcode=zipcode, 
