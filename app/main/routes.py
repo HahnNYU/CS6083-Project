@@ -167,7 +167,8 @@ def select_appointment(appointment_id):
     else:
         # Get patient
         patient = Patient.query.filter_by(login_id=current_user.id).first()
-        # Check if patient already has an accepted appointment
+        # Check if patient already has an accepted appointment or is already vaccinated
+        # TODO: add vaccinated check
         if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
             return redirect(url_for('main.available_appointments')) 
@@ -320,3 +321,72 @@ def edit_patient_profile():
             form.email.data = patient.email
             form.max_distance.data = patient.max_distance
         return render_template('edit_patient_profile.html', title='Edit Profile', form=form)
+
+
+@bp.route('/report_appointment')
+@login_required
+def report_appointment():
+    if current_user.user_type != 'Provider':
+        flash('Only providers can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        provider = Provider.query.filter_by(login_id=current_user.id).first()
+        expired_appointments = [{'appointment': a} for a in provider.appointments.filter(Appointment.appointment_time < datetime.utcnow())]
+
+        for apt_dict in expired_appointments:
+            apt = apt_dict['appointment']
+            active_match = apt.appointment_matches.filter_by(offer_status='accepted').first()
+            if active_match:
+                apt_dict['match'] = active_match
+
+        return render_template('report_appointment.html', title='Report Appointments', appointments=expired_appointments)
+
+
+
+@bp.route('/vaccinated/<match_id>')
+@login_required
+def vaccinated(match_id):
+    if current_user.user_type != 'Provider':
+        flash('Only providers can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        match = AppointmentMatch.query.filter_by(match_id=match_id).first()
+        match.offer_status = 'vaccinated'
+        db.session.add(match)
+        db.session.commit()
+        flash(f'Reported successfull vaccination of {match.matched_patient.patient_name} on {match.matched_appointment}!')
+        return redirect(url_for('main.report_appointment'))
+
+
+
+@bp.route('/no_show/<match_id>')
+@login_required
+def no_show(match_id):
+    if current_user.user_type != 'Provider':
+        flash('Only providers can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        match = AppointmentMatch.query.filter_by(match_id=match_id).first()
+        match.offer_status = 'no show'
+        db.session.add(match)
+        db.session.commit()
+        flash(f'Reported that {match.matched_patient.patient_name} was a no show on {match.matched_appointment}')
+        return redirect(url_for('main.report_appointment'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -40,6 +40,7 @@
                     <li><a href="{{ url_for('main.edit_patient_profile') }}">Edit Profile</a></li>
                     {% endif %}
                     {% if current_user.user_type=='Provider' %}
+                    <li><a href="{{ url_for('main.report_appointment') }}">Report Appointments</a></li>
                     <li><a href="{{ url_for('main.view_appointments') }}">View Appointments</a></li>
                     {% endif %}
                     {% if current_user.user_type=='Admin' %}

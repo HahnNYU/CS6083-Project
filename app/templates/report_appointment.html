@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+    <h1>Appointments:</h1>
+    <h4>All times in US/Eastern Time (ET)</h4>
+    {% if appointments %}
+        {% for apt in appointments %}
+            {% if apt.match %}
+            <div class="appointments form-group">
+                <h2>{{ apt.appointment }}</h2>  
+                    <h3>Patient Info:</h3>
+                    <h4>Name: {{ apt.match.matched_patient.patient_name }}</h4>  
+                    <h4>Email: {{ apt.match.matched_patient.email }}</h4>
+                    <h4>Phone: {{ apt.match.matched_patient.phone }}</h4>
+                <div>
+                    <a class="btn btn-primary" href="{{ url_for('main.vaccinated', match_id=apt.match.match_id) }}" type="button">Vaccinated</a>
+                    <a class="btn btn-warning" href="{{ url_for('main.no_show', match_id=apt.match.match_id) }}" type="button">No Show</a>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <h2>No appointments to report!</h2>
+    {% endif %}
+{% endblock %}
