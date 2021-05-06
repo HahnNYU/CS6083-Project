@@ -8,7 +8,7 @@ from app.main.forms import (TimePreferenceForm,
                             CreateAppointmentForm,
                             EditPatientProfileForm)
 from app.main.utils import construct_appointment_payload, geolocate
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 import pytz
 from datetime import datetime
@@ -111,17 +111,41 @@ def view_appointments():
         flash('Only providers can view that page')
         return redirect(url_for('main.index'))
     else:
+        # Get filter argument
+        filter_dict = {'available': '', 'accepted': '', 'cancelled': ''}
+        filter_arg = request.args.get('filter')
+        if filter_arg:
+            filter_dict[filter_arg] = 'active'
+        else:
+            # Default value
+            filter_dict['available'] = 'active'
+        # Get appointments and appointment matches based on the filter 
         provider = Provider.query.filter_by(login_id=current_user.id).first()
         appointments = [{'appointment': a} for a in provider.appointments]
-        for apt_dict in appointments:
-            apt = apt_dict['appointment']
-            # Check if appointment has an active match
-            match = apt.appointment_matches.filter(
-                            or_(AppointmentMatch.offer_status=='accepted', 
-                                    AppointmentMatch.offer_status=='pending')).first()
-            if match:
-                apt_dict['match'] = match
-        return render_template('view_appointments.html', title='View Appointments', appointments=appointments)
+        output = []
+        if filter_dict['available']:
+            for apt_dict in appointments:
+                apt = apt_dict['appointment']
+                if apt.available:
+                    output.append(apt_dict)
+        elif filter_dict['accepted']:
+            for apt_dict in appointments:
+                apt = apt_dict['appointment']
+                # Check if appointment has an active match
+                match = apt.appointment_matches.filter_by(offer_status='accepted').first()
+                if match:
+                    apt_dict['match'] = match
+                    output.append(apt_dict)
+        elif filter_dict['cancelled']:
+            for apt_dict in appointments:
+                apt = apt_dict['appointment']
+                # Check if appointment has an active match
+                match = apt.appointment_matches.filter_by(offer_status='cancelled').all()
+                for m in match:
+                    temp = apt_dict
+                    temp['match'] = m
+                    output.append(temp)
+        return render_template('view_appointments.html', title='View Appointments', appointments=output, filter_dict=filter_dict)
 
 
 @bp.route('/available_appointments')
@@ -135,7 +159,9 @@ def available_appointments():
         patient = Patient.query.filter_by(login_id=current_user.id).first()
         time_blocks = patient.time_preferences
         # Get all available appointments
-        available_appointments = Appointment.query.filter_by(available=True).all()
+        available_appointments = Appointment.query.filter(
+                and_(Appointment.available==True,
+                    Appointment.appointment_time >= datetime.utcnow())).all()
         # Filter appointments based on patient's time preferences
         appointment_options = []
         for a in available_appointments:
@@ -167,14 +193,18 @@ def select_appointment(appointment_id):
     else:
         # Get patient
         patient = Patient.query.filter_by(login_id=current_user.id).first()
-        # Check if patient already has an accepted appointment or is already vaccinated
-        # TODO: add vaccinated check
+        # Check if patient already has an accepted appointment 
         if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
             return redirect(url_for('main.available_appointments')) 
+        # Check if patient already has a pending appointment 
         elif AppointmentMatch.query.filter_by(offer_status='pending').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for an appointment while you have a pending suggested appointment. Please decline your suggested appointment before registering for a new one') 
             return redirect(url_for('main.manage_appointment')) 
+        # Check if patient is already vaccinated
+        elif AppointmentMatch.query.filter_by(offer_status='vaccinated').filter_by(patient_id=patient.patient_id).first():
+            flash('You cannot register for an appointment because you have already been vaccinated!') 
+            return redirect(url_for('main.available_appointments')) 
         # Get appointment
         appointment = Appointment.query.filter_by(appointment_id=appointment_id).first()
         # Create AppointmentMatch with status 'accepted'
@@ -230,6 +260,7 @@ def cancel_appointment(match_id):
         current_appointment = current_match.matched_appointment
         # Cancel current match and add change to db session
         current_match.offer_status = 'cancelled'
+        current_match.time_offer_expires = datetime.utcnow()
         db.session.add(current_match)
         # Make cancelled appointment available and add change to db session
         current_appointment.available = True
@@ -332,14 +363,15 @@ def report_appointment():
     else:
         provider = Provider.query.filter_by(login_id=current_user.id).first()
         expired_appointments = [{'appointment': a} for a in provider.appointments.filter(Appointment.appointment_time < datetime.utcnow())]
-
+        matched_appointments = []
         for apt_dict in expired_appointments:
             apt = apt_dict['appointment']
             active_match = apt.appointment_matches.filter_by(offer_status='accepted').first()
             if active_match:
                 apt_dict['match'] = active_match
+                matched_appointments.append(apt_dict)
 
-        return render_template('report_appointment.html', title='Report Appointments', appointments=expired_appointments)
+        return render_template('report_appointment.html', title='Report Appointments', appointments=matched_appointments)
 
 
 

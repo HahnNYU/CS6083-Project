@@ -177,6 +177,7 @@ class AppointmentMatch(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.patient_id'), nullable=False)
     offer_status = db.Column(db.String(20))
     time_offer_made = db.Column(db.DateTime)
+    # time_offer_expires will also be used as cancelled time
     time_offer_expires = db.Column(db.DateTime)
 
     def __repr__(self):

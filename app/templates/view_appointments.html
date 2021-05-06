@@ -1,24 +1,45 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-    <h1>Appointments:</h1>
-    <h4>All times in US/Eastern Time (ET)</h4>
-    {% if appointments %}
-        {% for apt in appointments %}
-        <div class="appointments form-group">
-            <h2>{{ apt.appointment }}</h2>  
-            {% if apt.match %}
-                <h3>Patient Info:</h3>
-                <h4>Name: {{ apt.match.matched_patient.patient_name }}</h4>  
-                <h4>Email: {{ apt.match.matched_patient.email }}</h4>
-                <h4>Phone: {{ apt.match.matched_patient.phone }}</h4>
-                <h3>Offer Status: {{ apt.match.offer_status }}</h3>
-            {% else %}
-                <h3>Appointment not currently matched</h3>
-            {% endif %}
-        </div>
-        {% endfor %}
-    {% else %}
-        <h2>You currently have no appointments.</h2>
-    {% endif %}
+
+<div class="row">
+    <div class="col-md-2 apt-filters">
+        <ul class="nav nav-pills nav-stacked">
+            <li class="{{ filter_dict.available }}">
+                <a href="{{ url_for('main.view_appointments', filter=['available']) }}">Available</a>
+            </li>
+            <li class="{{ filter_dict.accepted }}">
+                <a href="{{ url_for('main.view_appointments', filter=['accepted']) }}">Accepted</a>
+            </li>
+            <li class="{{ filter_dict.cancelled }}">
+                <a href="{{ url_for('main.view_appointments', filter=['cancelled']) }}">Cancelled</a>
+            </li>
+        </ul>
+    </div>
+    <div class="col-md-10">
+        <h1>Appointments:</h1>
+        <h4>All times in US/Eastern Time (ET)</h4>
+        {% if appointments %}
+            {% for apt in appointments %}
+            <div class="appointments form-group">
+                <h2>{{ apt.appointment }}</h2>  
+                {% if apt.match %}
+                    <h3>Patient Info:</h3>
+                    <h4>Name: {{ apt.match.matched_patient.patient_name }}</h4>  
+                    <h4>Email: {{ apt.match.matched_patient.email }}</h4>
+                    <h4>Phone: {{ apt.match.matched_patient.phone }}</h4>
+                    <h3>Offer Status: {{ apt.match.offer_status }}</h3>
+                    {% if apt.match.offer_status=='cancelled' %}
+                        <h3>Cancellation Time: {{ apt.match.expire_time() }}</h3>
+                    {% endif %}
+                {% else %}
+                    <h3>Appointment not currently matched</h3>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <h2>You currently have no appointments.</h2>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
