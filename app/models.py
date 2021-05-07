@@ -93,6 +93,9 @@ class Patient(db.Model):
         return self.time_preferences.filter(
             time_preference.c.time_block_id==time_block.time_block_id).count() > 0
 
+    def is_vaccinated(self):
+        return self.appointment_matches.filter_by(offer_status='vaccinated').count() > 0
+
 
 class Provider(db.Model):
     __tablename__ = 'provider'
@@ -181,7 +184,7 @@ class AppointmentMatch(db.Model):
     time_offer_expires = db.Column(db.DateTime)
 
     def __repr__(self):
-        return f'<AppointmentMatch {self.patient_id}: {self.offer_status}>'
+        return f'<AppointmentMatch {self.match_id}: {self.offer_status}>'
 
     def expire_time(self):
         eastern = pytz.timezone('US/Eastern')

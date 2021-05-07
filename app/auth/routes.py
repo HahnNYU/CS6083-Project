@@ -5,10 +5,10 @@ from app.auth import bp
 from app.auth.forms import (LoginForm, PatientRegistrationForm, 
                         ProviderRegistrationForm)
 from app.models import UserLogin, Address, Patient, Provider, AppointmentMatch
-from app.auth.utils import register_geolocate, appointment_matcher
+from app.auth.utils import register_geolocate 
 
 from sqlalchemy import or_
-from datetime import datetime, timedelta
+from datetime import datetime 
 
 
 
@@ -25,28 +25,6 @@ def login():
 
         login_user(user, remember=form.remember_me.data)
         if user.user_type == 'Patient':
-            patient = Patient.query.filter_by(login_id=user.id).first()
-            # Search for suggested appointment if the patient has none
-            if not patient.appointment_matches.filter(
-                            or_(AppointmentMatch.offer_status=='accepted', 
-                                    AppointmentMatch.offer_status=='pending')).first():
-                appointment_option = appointment_matcher(patient)
-                if appointment_option:
-                    # Create new appointment match
-                    new_match = AppointmentMatch(
-                            appointment_id=appointment_option.appointment_id,
-                            patient_id=patient.patient_id,
-                            offer_status='pending',
-                            time_offer_made=datetime.utcnow(),
-                            time_offer_expires=datetime.utcnow()+timedelta(days=1)
-                            )
-                    if appointment_option.available:
-                        appointment_option.available = False
-                        db.session.add(appointment_option)
-                        db.session.add(new_match)
-                        db.session.commit()
-                        flash(f'You have a new appointment offer. Offer expires in one day')
-
             return redirect(url_for('main.manage_appointment'))
         elif user.user_type == 'Provider':
             return redirect(url_for('main.index'))

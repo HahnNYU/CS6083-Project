@@ -1,4 +1,5 @@
-from flask import render_template, flash, redirect, url_for, request
+from flask import (render_template, flash, redirect, 
+                   url_for, request, g)
 from flask_login import current_user, login_required
 from app import db
 from app.main import bp
@@ -7,11 +8,12 @@ from app.models import (TimeBlockOptions, Patient, Appointment,
 from app.main.forms import (TimePreferenceForm, 
                             CreateAppointmentForm,
                             EditPatientProfileForm)
-from app.main.utils import construct_appointment_payload, geolocate
+from app.main.utils import construct_appointment_payload, geolocate, appointment_matcher
+                            
 from sqlalchemy import or_, and_
 
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 @bp.route('/')
@@ -112,7 +114,7 @@ def view_appointments():
         return redirect(url_for('main.index'))
     else:
         # Get filter argument
-        filter_dict = {'available': '', 'accepted': '', 'cancelled': ''}
+        filter_dict = {'available': '', 'accepted': '', 'cancelled': '', 'pending': ''}
         filter_arg = request.args.get('filter')
         if filter_arg:
             filter_dict[filter_arg] = 'active'
@@ -128,6 +130,8 @@ def view_appointments():
                 apt = apt_dict['appointment']
                 if apt.available:
                     output.append(apt_dict)
+            # Sort output by appointment time
+            output.sort(key=lambda x: x['appointment'].appointment_time)
         elif filter_dict['accepted']:
             for apt_dict in appointments:
                 apt = apt_dict['appointment']
@@ -136,15 +140,31 @@ def view_appointments():
                 if match:
                     apt_dict['match'] = match
                     output.append(apt_dict)
+            # Sort output by appointment time
+            output.sort(key=lambda x: x['appointment'].appointment_time)
         elif filter_dict['cancelled']:
             for apt_dict in appointments:
                 apt = apt_dict['appointment']
-                # Check if appointment has an active match
-                match = apt.appointment_matches.filter_by(offer_status='cancelled').all()
-                for m in match:
-                    temp = apt_dict
-                    temp['match'] = m
+                # Check if appointment has any cancelled matches
+                cancelled_matches = apt.appointment_matches.filter(
+                    and_(AppointmentMatch.offer_status=='cancelled',
+                         Appointment.provider_id==provider.provider_id)).all()
+                for match in cancelled_matches:
+                    temp = {'appointment': match.matched_appointment,
+                            'match': match}
                     output.append(temp)
+            # Sort output by cancellation time
+            output.sort(key=lambda x: x['match'].time_offer_expires, reverse=True)
+        elif filter_dict['pending']:
+            for apt_dict in appointments:
+                apt = apt_dict['appointment']
+                # Check if appointment has a pending match
+                match = apt.appointment_matches.filter_by(offer_status='pending').first()
+                if match:
+                    apt_dict['match'] = match
+                    output.append(apt_dict)
+            # Sort output by time offer made
+            output.sort(key=lambda x: x['match'].time_offer_made)
         return render_template('view_appointments.html', title='View Appointments', appointments=output, filter_dict=filter_dict)
 
 
@@ -202,7 +222,7 @@ def select_appointment(appointment_id):
             flash('You cannot register for an appointment while you have a pending suggested appointment. Please decline your suggested appointment before registering for a new one') 
             return redirect(url_for('main.manage_appointment')) 
         # Check if patient is already vaccinated
-        elif AppointmentMatch.query.filter_by(offer_status='vaccinated').filter_by(patient_id=patient.patient_id).first():
+        elif patient.is_vaccinated():
             flash('You cannot register for an appointment because you have already been vaccinated!') 
             return redirect(url_for('main.available_appointments')) 
         # Get appointment
@@ -404,7 +424,6 @@ def no_show(match_id):
         db.session.commit()
         flash(f'Reported that {match.matched_patient.patient_name} was a no show on {match.matched_appointment}')
         return redirect(url_for('main.report_appointment'))
-
 
 
 

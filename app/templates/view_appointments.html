@@ -11,6 +11,9 @@
             <li class="{{ filter_dict.accepted }}">
                 <a href="{{ url_for('main.view_appointments', filter=['accepted']) }}">Accepted</a>
             </li>
+            <li class="{{ filter_dict.pending }}">
+                <a href="{{ url_for('main.view_appointments', filter=['pending']) }}">Pending</a>
+            </li>
             <li class="{{ filter_dict.cancelled }}">
                 <a href="{{ url_for('main.view_appointments', filter=['cancelled']) }}">Cancelled</a>
             </li>
