@@ -73,8 +73,8 @@ def appointment_matcher():
     all_patients = Patient.query.all()
     unvaccinated_patients = [p for p in all_patients if not p.is_vaccinated()]
     priority_groups = [i.priority_group for i in QualificationDate.query.all()]
-    # Create a default group to assign to patients without a prioirty group
-    default_group = max(priority_groups) + 1
+    # Set default priority group to be the highest one for patients that aren't assigned yet
+    default_group = max(priority_groups)
     # Organize unvaccinated patients by priority groups
     patients_by_group = {default_group: []}
     for p in unvaccinated_patients:
@@ -92,6 +92,11 @@ def appointment_matcher():
             patients_by_group[default_group].append(p)
     # Assign appointments to patients in order of priority groups
     for pg in range(1, default_group+1):
+        qd = QualificationDate.query.filter_by(priority_group=pg).first().qualify_date
+        qualification_datetime = datetime.utcnow().replace(year=qd.year).replace(month=qd.month).replace(day=qd.day).replace(hour=0)
+        # Skip priority groups that don't qualify for a vaccine yet
+        if qualification_datetime > datetime.utcnow():
+            continue
         patients_in_group = patients_by_group.get(pg, [])
         for p in patients_in_group:
             appointment_options = find_matches(p)

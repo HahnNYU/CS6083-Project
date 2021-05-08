@@ -14,8 +14,11 @@
             <li class="{{ filter_dict.pending }}">
                 <a href="{{ url_for('main.view_appointments', filter=['pending']) }}">Pending</a>
             </li>
-            <li class="{{ filter_dict.cancelled }}">
-                <a href="{{ url_for('main.view_appointments', filter=['cancelled']) }}">Cancelled</a>
+            <li class="{{ filter_dict.cancelled_cancel }}">
+                <a href="{{ url_for('main.view_appointments', filter=['cancelled_cancel']) }}">Cancelled<br><small>By cancellation time</small></a>
+            </li>
+            <li class="{{ filter_dict.cancelled_apt }}">
+                <a href="{{ url_for('main.view_appointments', filter=['cancelled_apt']) }}">Cancelled<br><small>By appointment time</small></a>
             </li>
         </ul>
     </div>

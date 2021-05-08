@@ -4,7 +4,8 @@ from flask_login import current_user, login_required
 from app import db
 from app.main import bp
 from app.models import (TimeBlockOptions, Patient, Appointment, 
-                        Provider, Address, AppointmentMatch)
+                        Provider, Address, AppointmentMatch,
+                        QualificationDate)
 from app.main.forms import (TimePreferenceForm, 
                             CreateAppointmentForm,
                             EditPatientProfileForm)
@@ -114,7 +115,7 @@ def view_appointments():
         return redirect(url_for('main.index'))
     else:
         # Get filter argument
-        filter_dict = {'available': '', 'accepted': '', 'cancelled': '', 'pending': ''}
+        filter_dict = {'available': '', 'accepted': '', 'cancelled_cancel': '', 'pending': '', 'cancelled_apt': ''}
         filter_arg = request.args.get('filter')
         if filter_arg:
             filter_dict[filter_arg] = 'active'
@@ -142,7 +143,7 @@ def view_appointments():
                     output.append(apt_dict)
             # Sort output by appointment time
             output.sort(key=lambda x: x['appointment'].appointment_time)
-        elif filter_dict['cancelled']:
+        elif filter_dict['cancelled_cancel']:
             for apt_dict in appointments:
                 apt = apt_dict['appointment']
                 # Check if appointment has any cancelled matches
@@ -155,6 +156,19 @@ def view_appointments():
                     output.append(temp)
             # Sort output by cancellation time
             output.sort(key=lambda x: x['match'].time_offer_expires, reverse=True)
+        elif filter_dict['cancelled_apt']:
+            for apt_dict in appointments:
+                apt = apt_dict['appointment']
+                # Check if appointment has any cancelled matches
+                cancelled_matches = apt.appointment_matches.filter(
+                    and_(AppointmentMatch.offer_status=='cancelled',
+                         Appointment.provider_id==provider.provider_id)).all()
+                for match in cancelled_matches:
+                    temp = {'appointment': match.matched_appointment,
+                            'match': match}
+                    output.append(temp)
+            # Sort output by cancellation time
+            output.sort(key=lambda x: x['appointment'].appointment_time)
         elif filter_dict['pending']:
             for apt_dict in appointments:
                 apt = apt_dict['appointment']
@@ -213,6 +227,15 @@ def select_appointment(appointment_id):
     else:
         # Get patient
         patient = Patient.query.filter_by(login_id=current_user.id).first()
+        # Get qualification datetime
+        if not patient.priority_group:
+            priority_groups = [i.priority_group for i in QualificationDate.query.all()]
+            # Set default priority group to be the highest one for patients that aren't assigned yet
+            user_group = max(priority_groups)
+        else:
+            user_group = patient.priority_group
+        qd = QualificationDate.query.filter_by(priority_group=user_group).first().qualify_date
+        qualification_datetime = datetime.utcnow().replace(year=qd.year).replace(month=qd.month).replace(day=qd.day).replace(hour=0)
         # Check if patient already has an accepted appointment 
         if AppointmentMatch.query.filter_by(offer_status='accepted').filter_by(patient_id=patient.patient_id).first():
             flash('You cannot register for more than one appointment. Please cancel any other appointments before registering for a new one') 
@@ -224,6 +247,10 @@ def select_appointment(appointment_id):
         # Check if patient is already vaccinated
         elif patient.is_vaccinated():
             flash('You cannot register for an appointment because you have already been vaccinated!') 
+            return redirect(url_for('main.available_appointments')) 
+        # Check if patient priority group is eligible
+        elif qualification_datetime > datetime.utcnow():
+            flash(f'You are not eligible to register for a vaccine until {qualification_datetime.strftime("%A, %B %d, %Y")}') 
             return redirect(url_for('main.available_appointments')) 
         # Get appointment
         appointment = Appointment.query.filter_by(appointment_id=appointment_id).first()
