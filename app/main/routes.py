@@ -129,7 +129,7 @@ def view_appointments():
         if filter_dict['available']:
             for apt_dict in appointments:
                 apt = apt_dict['appointment']
-                if apt.available:
+                if apt.available and apt.appointment_time >= datetime.utcnow():
                     output.append(apt_dict)
             # Sort output by appointment time
             output.sort(key=lambda x: x['appointment'].appointment_time)
