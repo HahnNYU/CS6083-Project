@@ -22,17 +22,17 @@ def make_shell_context():
            }
 
 
+# crontab to run at every 5 minutes:
+# */5 * * * * cd <project directory> && venv/bin/flask offer-appointments > /dev/null 2>&1
 @app.cli.command()
 def offer_appointments():
     """Run appointment matcher"""
-    # crontab to run at every 5 minutes:
-    # */5 * * * * cd <project directory> && venv/bin/flask offer-appointments > /dev/null 2>&1
     appointment_matcher()
 
 
+# crontab to run once every day:
+# 0 20 * * * cd <project directory> && venv/bin/flask remove-expired > /dev/null 2>&1
 @app.cli.command()
 def remove_expired():
     """Unmatch pending appointments that are expired"""
-    # crontab to run once every day:
-    # 0 20 * * * cd <project directory> && venv/bin/flask remove-expired > /dev/null 2>&1
     unmatch_expired_offers()
