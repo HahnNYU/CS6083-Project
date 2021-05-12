@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+<div class="appointments form-group">
+    <h1>Patient: {{ patient.patient_name }}</h1>
+    <h2>Date of Birth: {{ patient.date_of_birth }}</h2>
+    <h2>Current Priority: {{ patient.priority_group }}</h2>
+    {{ wtf.quick_form(form) }}
+</div>
+{% endblock %}

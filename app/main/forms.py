@@ -109,6 +109,9 @@ class EditPatientProfileForm(FlaskForm):
                 raise ValidationError('That email is already taken. Please use a difference email address.')
 
 
+class UpdatePriorityForm(FlaskForm):
+    priority_options = SelectField('Priority Group', choices=[], validators=[DataRequired()])
+    submit = SubmitField('Update Priority Group')
 
 
 

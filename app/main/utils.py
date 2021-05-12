@@ -93,7 +93,12 @@ def appointment_matcher():
     # Assign appointments to patients in order of priority groups
     for pg in range(1, default_group+1):
         qd = QualificationDate.query.filter_by(priority_group=pg).first().qualify_date
-        qualification_datetime = datetime.utcnow().replace(year=qd.year).replace(month=qd.month).replace(day=qd.day).replace(hour=0)
+        qualification_datetime = (datetime.utcnow()
+                            .replace(year=qd.year)
+                            .replace(month=qd.month)
+                            .replace(day=qd.day)
+                            .replace(hour=0)
+                        )
         # Skip priority groups that don't qualify for a vaccine yet
         if qualification_datetime > datetime.utcnow():
             continue

@@ -8,7 +8,8 @@ from app.models import (TimeBlockOptions, Patient, Appointment,
                         QualificationDate)
 from app.main.forms import (TimePreferenceForm, 
                             CreateAppointmentForm,
-                            EditPatientProfileForm)
+                            EditPatientProfileForm,
+                            UpdatePriorityForm)
 from app.main.utils import construct_appointment_payload, geolocate, appointment_matcher
                             
 from sqlalchemy import or_, and_
@@ -29,6 +30,7 @@ def index():
                        }
     provider = None
     patient = None
+    all_patients = None
     if current_user.is_anonymous:
         pass
     elif current_user.user_type == 'Patient':
@@ -40,8 +42,12 @@ def index():
             matches = apt.appointment_matches
             for match in matches:
                 appointment_data[match.offer_status] += 1
+    elif current_user.user_type == 'Admin':
+        all_patients = Patient.query.all()
 
-    return render_template('index.html', title='Home Page', appointment_data=appointment_data, provider=provider, patient=patient)
+
+    return render_template('index.html', title='Home Page', appointment_data=appointment_data, provider=provider, patient=patient,
+                            all_patients=all_patients)
 
 
 @bp.route('/time_preference', methods=['GET','POST'])
@@ -453,6 +459,28 @@ def no_show(match_id):
         return redirect(url_for('main.report_appointment'))
 
 
+@bp.route('/update_priority/<patient_id>', methods=['GET','POST'])
+@login_required
+def update_priority(patient_id):
+    if current_user.user_type != 'Admin':
+        flash('Only admins can view that page')
+        return redirect(url_for('main.index'))
+    else:
+        form = UpdatePriorityForm()
+        # Get all choices for priority group 
+        form.priority_options.choices = [(str(option.priority_group), str(option.priority_group)) for option in QualificationDate.query.all()]
+        # Get patient linked to patient id
+        patient = Patient.query.filter_by(patient_id=patient_id).first()
+        if form.validate_on_submit():
+            pg = form.priority_options.data
+            # Update priority group in data base
+            patient.priority_group = pg
+            db.session.add(patient)
+            db.session.commit()
+            flash(f'Updated priority group of {patient.patient_name} to {pg}')
+            return redirect(url_for('main.index'))
+        return render_template('update_priority.html', title='Update Priority', form=form, patient=patient) 
+            
 
 
 

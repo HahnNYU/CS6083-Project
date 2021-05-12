@@ -23,5 +23,24 @@
     {% elif current_user.user_type == 'Patient' %}
         <h1>Hello, {{ patient.patient_name }}.</h1>
         <h1>Welcome to COVID-19 vaccine appointment app!</h1>
+    {% elif current_user.user_type == 'Admin' %}
+        <h1>Hello, {{ current_user.username }}.</h1>
+        <h2>Patients:</h2>
+        <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Date of Birth</th>
+            <th>Priority Group</th>
+        </tr>
+        {% for patient in all_patients %}
+            <tr>
+                <td>{{ patient.patient_id }}</td>
+                <td>{{ patient.patient_name }}</td>
+                <td>{{ patient.date_of_birth }}</td>
+                <td>{{ patient.priority_group }} <a class="btn btn-default" href="{{ url_for('main.update_priority', patient_id=patient.patient_id) }}" role="button">Update</a></td>
+            </tr>
+        {% endfor %}
+        </table>
     {% endif %}
 {% endblock %}
