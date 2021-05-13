@@ -110,7 +110,7 @@ class EditPatientProfileForm(FlaskForm):
 
 
 class UpdatePriorityForm(FlaskForm):
-    priority_options = SelectField('Priority Group', choices=[], validators=[DataRequired()])
+    priority_options = SelectField('New Priority Group', choices=[], validators=[DataRequired()])
     submit = SubmitField('Update Priority Group')
 
 
